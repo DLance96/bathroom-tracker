@@ -1,6 +1,8 @@
+## The following requirements were added by pip --freeze:
 Flask==0.11.1
 Jinja2==2.8
 MarkupSafe==0.23
 Werkzeug==0.11.11
 click==6.6
 itsdangerous==0.24
+psycopg2==2.6.2
