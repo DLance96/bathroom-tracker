@@ -5,13 +5,13 @@
 <body>
     <form action="{{url_for('building_major')}}" method="POST">
         Select major: <select name="major">
-            {% for m in majors %}
-            <option value="{{m}}">{{m}}</option>
+            {% for (mid, mname) in majors %}
+            <option value="{{mid}}">{{mname}}</option>
             {% endfor %}
         </select> <br />
         Select a building: <select name="building">
-            {% for b in buildings %}
-            <option value="{{b}}">{{b}}</option>
+            {% for (bid, bname) in buildings %}
+            <option value="{{bid}}">{{bname}}</option>
             {% endfor %}
         </select> <br />
         <input type="submit" />

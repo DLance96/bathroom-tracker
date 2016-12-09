@@ -17,6 +17,7 @@ def bathroom(id):
     cur = conn.cursor()
     cur.execute("SELECT * FROM bathroom WHERE id=%s", (id,))
     x = cur.fetchone() or 'none'
+    conn.commit()
     cur.close()
     return x
 
@@ -30,6 +31,7 @@ def add_building():
                ON CONFLICT (name) DO UPDATE SET opens=EXCLUDED.opens,
                closes=EXCLUDED.closes RETURNING id""", (name,))
     x = cur.fetchone()
+    conn.commit()
     cur.close()
     return str(x)
 
@@ -43,6 +45,7 @@ def building_major():
     cur.execute("""INSERT INTO building_access (building, major) VALUES
                 (%s, %s) ON CONFLICT (building, major) DO NOTHING""",
                 (major, building,))
+    conn.commit()
     cur.close()
     return "DONE"
 
@@ -55,6 +58,7 @@ def building_major_view():
     buildings = cur.fetchall()
     cur.execute("""SELECT id, name FROM major""")
     majors = cur.fetchall()
+    conn.commit()
     cur.close()
     # TODO: a form that allows users to select one of each of these
     return render_template(
@@ -81,6 +85,7 @@ def add_bathroom():
     cur.execute("""INSERT INTO bathroom (building, floor, gender) VALUES
                 (%s, %s, %s) RETURNING id""", (building_id, floor, gender,))
     x = cur.fetchone()
+    conn.commit()
     cur.close()
 
     return str(x)
@@ -93,6 +98,7 @@ def add_bathroom_view():
     cur = conn.cursor()
     cur.execute("""SELECT id, name FROM building""")
     buildings = cur.fetchall()
+    conn.commit()
     cur.close()
     # TODO: make a form with this stuffs
     return (gender, buildings)
@@ -103,6 +109,7 @@ def list_bathrooms():
     cur = conn.cursor()
     cur.execute("SELECT * FROM bathroom")
     ret = cur.fetchall()
+    conn.commit()
     cur.close()
     return str(ret)
 
@@ -121,6 +128,7 @@ def add_major():
     cur.execute("""INSERT INTO major (name) VALUES (%s) ON CONFLICT (name)
                 DO UPDATE SET name=EXCLUDED.name RETURNING id""", (major,))
     x = cur.fetchone()
+    conn.commit()
     cur.close()
     return str(x)
 
@@ -140,6 +148,7 @@ def add_user(username):
                 (case_id) DO UPDATE SET case_id=EXCLUDED.case_id
                 RETURNING case_id""", (username,))
     x = cur.fetchone()
+    conn.commit()
     cur.close()
     return str(x)
 
@@ -156,6 +165,7 @@ def mod_user(username):
                 ON CONFLICT (case_id) DO UPDATE SET major=EXCLUDED.major
                 RETURNING case_id""", (username, major,))
     x = cur.fetchone()
+    conn.commit()
     cur.close()
     return str(x)
 
@@ -166,6 +176,7 @@ def mod_user_view(username):
     cur = conn.cursor()
     cur.execute("""SELECT id, name FROM major""")
     majors = cur.fetchall()
+    conn.commit()
     cur.close()
     # TODO: make a form here too
     return str(majors)
@@ -182,6 +193,7 @@ def add_reivew(bathroom):
     cur = conn.cursor()
     cur.execute("""INSERT INTO review (bathroom, review, person, rating) VALUES
                 (%s, %s, %s, %s)""", (bathroom, review, username, rating,))
+    conn.commit()
     cur.close()
     return "DONE"
 
@@ -192,6 +204,7 @@ def add_reivew_view(bathroom):
     cur = conn.cursor()
     cur.execute("""SELECT id, name FROM bathroom""")
     bathrooms = cur.fetchall()
+    conn.commit()
     cur.close()
     # TODO: form here
     return str(bathrooms)
@@ -203,6 +216,7 @@ def get_review(bathroom):
     cur.execute("""SELECT bathroom, review, rating FROM review WHERE
                 bathroom=(%s)""", (bathroom,))
     x = cur.fetchall()
+    conn.commit()
     cur.close()
     return str(x)
 
