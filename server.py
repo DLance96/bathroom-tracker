@@ -14,15 +14,51 @@ conn = psycopg2.connect(os.environ['PGCONN'])
 
 @app.route("/bathroom/<int:id>")
 def bathroom(id):
-    return "THIS IS A BATHROOM WITH ID %s" % id
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM bathroom WHERE id=%s", (id,))
+    x = cur.fetchone() or 'none'
+    cur.close()
+    return x
+
+
+@app.route("/bathroom/add", methods=["POST"])
+@login_required
+def add_bathroom():
+    return ""
+
+
+@app.route("/bathroom/add", methods=["GET"])
+@login_required
+def add_bathroom_view():
+    return "form goes here"
+
 
 @app.route("/bathrooms")
 def list_bathrooms():
-    return "LIST OF BATHROOMS YAY"
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM bathroom")
+    cur.close()
+    return str(cur.fetchall())
+
+
+@app.route("/you")
+@login_required
+def you():
+    return cas.username
+
 
 @app.route("/")
 def hello():
     return "Hello world"
+
+
+if not os.path.exists('secret'):
+    print('NOTE: New secret key. All sessions lost.')
+    with open('secret', 'wb') as f:
+        f.write(os.urandom(24))
+with open('secret', 'rb') as f:
+    app.secret_key = f.read(24)
+
 
 if __name__ == "__main__":
     try:
