@@ -40,8 +40,9 @@ def building_major():
     building = int(request.form['building'])
     major = int(request.form['major'])
     cur = conn.cursor()
-    cur.execute("""INSERT INTO building_access (building, major) VALUES (%s, %s)
-                ON CONFLICT (building, major) DO NOTHING""", (major, building,))
+    cur.execute("""INSERT INTO building_access (building, major) VALUES
+                (%s, %s) ON CONFLICT (building, major) DO NOTHING""",
+                (major, building,))
     cur.close()
     return "DONE"
 
@@ -125,6 +126,7 @@ def add_major():
 def add_major_view():
     # TODO: form to add a major
     return "FORM TO ADD A MAJOR"
+
 
 @app.route("/user/add/<string:username>")
 @login_required
