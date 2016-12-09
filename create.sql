@@ -3,11 +3,11 @@ CREATE USER bathroom PASSWORD 'bath';
 GRANT ALL ON DATABASE bathroom_tracker TO bathroom;
 CREATE TABLE major (
     id SERIAL PRIMARY KEY,
-    name VARCHAR(64) UNIQUE
+    name VARCHAR(64) NOT NULL UNIQUE
 );
 CREATE TABLE building (
     id SERIAL PRIMARY KEY,
-    name VARCHAR(64) NOT NULL,
+    name VARCHAR(64) NOT NULL UNIQUE,
     opens TIME WITHOUT TIME ZONE,
     closes TIME WITHOUT TIME ZONE
 );
@@ -32,5 +32,6 @@ CREATE TABLE review (
     id SERIAL PRIMARY KEY,
     bathroom INTEGER REFERENCES bathroom(id),
     review TEXT,
+    person VARCHAR(8) REFERENCES person(case_id),
     rating INTEGER CHECK (rating > 0 AND rating <= 5)
 );

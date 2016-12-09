@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-from flask import Flask
-from flask_cas import CAS, login_required
+from flask import Flask, request
+from flask_cas import CAS, login_required, login, logout
 import psycopg2
 import os
 
 app = Flask(__name__)
 app.config['CAS_SERVER'] = 'https://login.case.edu'
-app.config['CAS_AFTER_LOGIN'] = 'index'
+app.config['CAS_AFTER_LOGIN'] = 'hello'
 cas = CAS(app, '/cas')
 
 conn = psycopg2.connect(os.environ['PGCONN'])
@@ -21,10 +21,39 @@ def bathroom(id):
     return x
 
 
+@app.route("/building/add", methods=["POST"])
+@login_required
+def add_building():
+    name = request.form['name']
+    cur = conn.cursor()
+    cur.execute("""INSERT INTO building (name) VALUES (%s)
+               ON CONFLICT (name) DO UPDATE SET opens=EXCLUDED.opens,
+               closes=EXCLUDED.closes RETURNING id""", (name,))
+    x = cur.fetchone()
+    cur.close()
+    return str(x)
+
+
+@app.route("/building/add", methods=["GET"])
+@login_required
+def add_building_view():
+    return "Add building form goes here"
+
+
 @app.route("/bathroom/add", methods=["POST"])
 @login_required
 def add_bathroom():
-    return ""
+    building_id = request.form['building_id']
+    floor = int(request.form['floor'])
+    gender = request.fomr['gender']
+
+    cur = conn.cursor()
+    cur.execute("""INSERT INTO bathroom (building, floor, gender) VALUES
+                (%s, %s, %s) RETURNING id""", (building_id, floor, gender,))
+    x = cur.fetchone()
+    cur.close()
+
+    return str(x)
 
 
 @app.route("/bathroom/add", methods=["GET"])
@@ -37,8 +66,9 @@ def add_bathroom_view():
 def list_bathrooms():
     cur = conn.cursor()
     cur.execute("SELECT * FROM bathroom")
+    ret = cur.fetchall()
     cur.close()
-    return str(cur.fetchall())
+    return str(ret)
 
 
 @app.route("/you")
@@ -47,9 +77,87 @@ def you():
     return cas.username
 
 
+@app.route("/major/add", methods=["POST"])
+@login_required
+def add_major():
+    major = request.form['major']
+    cur = conn.cursor()
+    cur.execute("""INSERT INTO major (name) VALUES (%s) ON CONFLICT (name)
+                DO UPDATE SET name=EXCLUDED.name RETURNING id""", (major,))
+    x = cur.fetchone()
+    cur.close()
+    return str(x)
+
+@app.route("/user/add/<string:username>")
+@login_required
+def add_user(username):
+    cur = conn.cursor()
+    cur.execute("""INSERT INTO person (case_id) VALUES (%s) ON CONFLICT
+                (case_id) DO UPDATE SET case_id=EXCLUDED.case_id
+                RETURNING case_id""", (username,))
+    x = cur.fetchone()
+    cur.close()
+    return str(x)
+
+
+@app.route("/user/modify/<string:username>", methods=["POST"])
+@login_required
+def mod_user(username):
+    if cas.username != username:
+        return "You can only edit you"
+    username = cas.username
+    major = int(request.post['major'])
+    cur = conn.cursor()
+    cur.execute("""INSERT INTO person (case_id, major) VALUES (%s, %s)
+                ON CONFLICT (case_id) DO UPDATE SET major=EXCLUDED.major
+                RETURNING case_id""", (username, major,))
+    x = cur.fetchone()
+    cur.close()
+    return str(x)
+
+
+@app.route("/user/modify/<string:username>", methods=["GET"])
+@login_required
+def mod_user_view(username):
+    return "Mod user form here"
+
+
+@app.route("/review/add/<int:bathroom>", methods=["POST"])
+@login_required
+def add_reivew(bathroom):
+    username = cas.username
+    bathroom = int(request.form['bathroom'])
+    review = request.form['review']
+    rating = int(request.form['rating'])
+
+    cur = conn.cursor()
+    cur.execute("""INSERT INTO review (bathroom, review, person, rating) VALUES
+                (%s, %s, %s, %s)""", (bathroom, review, username, rating,))
+
+
+@app.route("/review/add/<int:bathroom>", methods=["GET"])
+@login_required
+def add_reivew_view(bathroom):
+    return "REVIEW FORM HERE"
+
+
+@app.route("/review/<int:bathroom>")
+def get_review(bathroom):
+    cur = conn.cursor()
+    cur.execute("""SELECT bathroom, review, rating FROM review WHERE
+                bathroom=(%s)""", (bathroom,))
+    x = cur.fetchall()
+    cur.close()
+    return str(x)
+
+
 @app.route("/")
 def hello():
     return "Hello world"
+
+
+app.route("/login")(login)
+app.route("/logout")(logout)
 
 
 if not os.path.exists('secret'):
