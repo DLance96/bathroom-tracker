@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from flask import Flask, request
+from flask import Flask, request, render_template
 from flask_cas import CAS, login_required, login, logout
 import psycopg2
 import os
@@ -57,7 +57,11 @@ def building_major_view():
     majors = cur.fetchall()
     cur.close()
     # TODO: a form that allows users to select one of each of these
-    return str(buildings, majors)
+    return render_template(
+        "building_major.html",
+        buildings=buildings,
+        majors=majors,
+    )
 
 
 @app.route("/building/add", methods=["GET"])

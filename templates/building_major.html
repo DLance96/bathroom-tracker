@@ -1,0 +1,20 @@
+<html>
+<head>
+    <title>Associate a building and major</title>
+</head>
+<body>
+    <form action="{{url_for('building_major')}}" method="POST">
+        Select major: <select name="major">
+            {% for m in majors %}
+            <option value="{{m}}">{{m}}</option>
+            {% endfor %}
+        </select> <br />
+        Select a building: <select name="building">
+            {% for b in buildings %}
+            <option value="{{b}}">{{b}}</option>
+            {% endfor %}
+        </select> <br />
+        <input type="submit" />
+    </form>
+</body>
+</html>
