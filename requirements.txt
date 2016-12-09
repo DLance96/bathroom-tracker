@@ -6,3 +6,4 @@ Werkzeug==0.11.11
 click==6.6
 itsdangerous==0.24
 psycopg2==2.6.2
+-e git+git://github.com/cameronbwhite/Flask-CAS.git@v1.0.1#egg=Flask-CAS
