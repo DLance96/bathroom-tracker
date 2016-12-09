@@ -34,6 +34,31 @@ def add_building():
     return str(x)
 
 
+@app.route("/building/major", methods=["POST"])
+@login_required
+def building_major():
+    building = int(request.form['building'])
+    major = int(request.form['major'])
+    cur = conn.cursor()
+    cur.execute("""INSERT INTO building_access (building, major) VALUES (%s, %s)
+                ON CONFLICT (building, major) DO NOTHING""", (major, building,))
+    cur.close()
+    return "DONE"
+
+
+@app.route("/building/major", methods=["GET"])
+@login_required
+def building_major_view():
+    cur = conn.cursor()
+    cur.execute("""SELECT id, name FROM building""")
+    buildings = cur.fetchall()
+    cur.execute("""SELECT id, name FROM major""")
+    majors = cur.fetchall()
+    cur.close()
+    # TODO: a form that allows users to select one of each of these
+    return str(buildings, majors)
+
+
 @app.route("/building/add", methods=["GET"])
 @login_required
 def add_building_view():
@@ -45,7 +70,7 @@ def add_building_view():
 def add_bathroom():
     building_id = request.form['building_id']
     floor = int(request.form['floor'])
-    gender = request.fomr['gender']
+    gender = request.form['gender']
 
     cur = conn.cursor()
     cur.execute("""INSERT INTO bathroom (building, floor, gender) VALUES
@@ -59,7 +84,13 @@ def add_bathroom():
 @app.route("/bathroom/add", methods=["GET"])
 @login_required
 def add_bathroom_view():
-    return "form goes here"
+    gender = ['male', 'female', 'neither']
+    cur = conn.cursor()
+    cur.execute("""SELECT id, name FROM building""")
+    buildings = cur.fetchall()
+    cur.close()
+    # TODO: make a form with this stuffs
+    return (gender, buildings)
 
 
 @app.route("/bathrooms")
@@ -87,6 +118,13 @@ def add_major():
     x = cur.fetchone()
     cur.close()
     return str(x)
+
+
+@app.route("/major/add", methods=["GET"])
+@login_required
+def add_major_view():
+    # TODO: form to add a major
+    return "FORM TO ADD A MAJOR"
 
 @app.route("/user/add/<string:username>")
 @login_required
@@ -119,7 +157,12 @@ def mod_user(username):
 @app.route("/user/modify/<string:username>", methods=["GET"])
 @login_required
 def mod_user_view(username):
-    return "Mod user form here"
+    cur = conn.cursor()
+    cur.execute("""SELECT id, name FROM major""")
+    majors = cur.fetchall()
+    cur.close()
+    # TODO: make a form here too
+    return str(majors)
 
 
 @app.route("/review/add/<int:bathroom>", methods=["POST"])
@@ -133,12 +176,19 @@ def add_reivew(bathroom):
     cur = conn.cursor()
     cur.execute("""INSERT INTO review (bathroom, review, person, rating) VALUES
                 (%s, %s, %s, %s)""", (bathroom, review, username, rating,))
+    cur.close()
+    return "DONE"
 
 
 @app.route("/review/add/<int:bathroom>", methods=["GET"])
 @login_required
 def add_reivew_view(bathroom):
-    return "REVIEW FORM HERE"
+    cur = conn.cursor()
+    cur.execute("""SELECT id, name FROM bathroom""")
+    bathrooms = cur.fetchall()
+    cur.close()
+    # TODO: form here
+    return str(bathrooms)
 
 
 @app.route("/review/<int:bathroom>")
