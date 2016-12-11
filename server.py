@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from flask import Flask, request, render_template
+from flask import Flask, request, render_template, session
 from flask_cas import CAS, login_required, login, logout
 import psycopg2
 import os
@@ -14,13 +14,24 @@ conn = psycopg2.connect(os.environ['PGCONN'])
 
 @app.route("/bathroom/<int:id>")
 def bathroom(id):
+    username = cas.username
     cur = conn.cursor()
-    cur.execute("SELECT * FROM bathroom WHERE id=%s", (id,))
-    x = cur.fetchone() or 'none'
+    cur.execute("""SELECT bathroom.id, bathroom.gender, bathroom.floor,
+                building.name FROM bathroom INNER JOIN building ON
+                bathroom.building=building.id WHERE bathroom.id=%s""", (id,))
+    bathroom = cur.fetchone()
+    cur.execute("""SELECT review, person, rating FROM review WHERE
+                bathroom=%s""", (id,))
+    reviews = cur.fetchall()
     conn.commit()
     cur.close()
-    # TODO: return real info here
-    return x
+    session['CAS_AFTER_LOGIN_SESSION_URL'] = request.path
+    return render_template(
+        "bathroom.html",
+        bathroom=bathroom,
+        reviews=reviews,
+        username=username,
+    )
 
 
 @app.route("/building/add", methods=["POST"])
@@ -70,7 +81,6 @@ def building_major_view():
     majors = cur.fetchall()
     conn.commit()
     cur.close()
-    # TODO: a form that allows users to select one of each of these
     return render_template(
         "building_major.html",
         buildings=buildings,
@@ -114,14 +124,20 @@ def add_bathroom_view():
     )
 
 
+@app.route("/")
 @app.route("/bathrooms")
 def list_bathrooms():
     cur = conn.cursor()
-    cur.execute("SELECT * FROM bathroom")
-    ret = cur.fetchall()
+    cur.execute("""SELECT bathroom.id, bathroom.floor, bathroom.gender,
+                building.name FROM bathroom INNER JOIN building ON
+                bathroom.building=building.id""")
+    bathrooms = cur.fetchall()
     conn.commit()
     cur.close()
-    return str(ret)
+    return render_template(
+        "bathrooms.html",
+        bathrooms=bathrooms,
+    )
 
 
 @app.route("/you")
@@ -136,18 +152,17 @@ def add_major():
     major = request.form['major']
     cur = conn.cursor()
     cur.execute("""INSERT INTO major (name) VALUES (%s) ON CONFLICT (name)
-                DO UPDATE SET name=EXCLUDED.name RETURNING id""", (major,))
+                DO UPDATE SET name=EXCLUDED.name RETURNING name""", (major,))
     x = cur.fetchone()
     conn.commit()
     cur.close()
-    return str(x)
+    return "Successfully added the major %s" % x[0]
 
 
 @app.route("/major/add", methods=["GET"])
 @login_required
 def add_major_view():
-    # TODO: form to add a major
-    return "FORM TO ADD A MAJOR"
+    return render_template("add_major.html")
 
 
 @app.route("/user/add/<string:username>")
@@ -163,40 +178,40 @@ def add_user(username):
     return str(x)
 
 
-@app.route("/user/modify/<string:username>", methods=["POST"])
+@app.route("/user/modify", methods=["POST"])
 @login_required
-def mod_user(username):
-    if cas.username != username:
-        return "You can only edit you"
+def mod_user():
     username = cas.username
-    major = int(request.post['major'])
+    major = int(request.form['major'])
     cur = conn.cursor()
     cur.execute("""INSERT INTO person (case_id, major) VALUES (%s, %s)
                 ON CONFLICT (case_id) DO UPDATE SET major=EXCLUDED.major
                 RETURNING case_id""", (username, major,))
-    x = cur.fetchone()
     conn.commit()
     cur.close()
-    return str(x)
+    return "Successfully modified"
 
 
-@app.route("/user/modify/<string:username>", methods=["GET"])
+@app.route("/user/modify", methods=["GET"])
 @login_required
-def mod_user_view(username):
+def mod_user_view():
+    username = cas.username
     cur = conn.cursor()
     cur.execute("""SELECT id, name FROM major""")
     majors = cur.fetchall()
     conn.commit()
     cur.close()
-    # TODO: make a form here too
-    return str(majors)
+    return render_template(
+        "modify_user.html",
+        majors=majors,
+        username=username,
+    )
 
 
 @app.route("/review/add/<int:bathroom>", methods=["POST"])
 @login_required
-def add_reivew(bathroom):
+def add_review(bathroom):
     username = cas.username
-    bathroom = int(request.form['bathroom'])
     review = request.form['review']
     rating = int(request.form['rating'])
 
@@ -205,35 +220,7 @@ def add_reivew(bathroom):
                 (%s, %s, %s, %s)""", (bathroom, review, username, rating,))
     conn.commit()
     cur.close()
-    return "DONE"
-
-
-@app.route("/review/add/<int:bathroom>", methods=["GET"])
-@login_required
-def add_reivew_view(bathroom):
-    cur = conn.cursor()
-    cur.execute("""SELECT id, name FROM bathroom""")
-    bathrooms = cur.fetchall()
-    conn.commit()
-    cur.close()
-    # TODO: form here
-    return str(bathrooms)
-
-
-@app.route("/review/<int:bathroom>")
-def get_review(bathroom):
-    cur = conn.cursor()
-    cur.execute("""SELECT bathroom, review, rating FROM review WHERE
-                bathroom=(%s)""", (bathroom,))
-    x = cur.fetchall()
-    conn.commit()
-    cur.close()
-    return str(x)
-
-
-@app.route("/")
-def hello():
-    return "Hello world"
+    return "Review added"
 
 
 app.route("/login")(login)
