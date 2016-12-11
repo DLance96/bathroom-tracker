@@ -17,8 +17,8 @@ def bathroom(id):
     username = cas.username
     cur = conn.cursor()
     cur.execute("""SELECT bathroom.brid, bathroom.gender, bathroom.floor,
-                building.name FROM bathroom INNER JOIN building ON
-                bathroom.bid=building.bid WHERE bathroom.brid=%s""", (id,))
+                building.name FROM bathroom NATURAL JOIN building WHERE
+                bathroom.brid=%s""", (id,))
     bathroom = cur.fetchone()
     cur.execute("""SELECT review, case_id, rating FROM review WHERE
                 brid=%s""", (id,))
@@ -129,8 +129,9 @@ def add_bathroom_view():
 def list_bathrooms():
     cur = conn.cursor()
     cur.execute("""SELECT bathroom.brid, bathroom.floor, bathroom.gender,
-                building.name FROM bathroom INNER JOIN building ON
-                bathroom.bid=building.bid""")
+                building.name, rev.ar FROM bathroom NATURAL JOIN building
+                LEFT OUTER JOIN (SELECT brid, AVG(rating) AS ar FROM review
+                GROUP BY brid) AS rev ON rev.brid=bathroom.brid""")
     bathrooms = cur.fetchall()
     conn.commit()
     cur.close()

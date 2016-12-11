@@ -3,7 +3,7 @@
     <title>Bathroom list</title>
 </head>
     {% for b in bathrooms %}
-    <a href="/bathroom/{{b[0]}}">{{b[2]}} bathroom on floor {{b[1]}} of {{b[3]}}</a>
+    <a href="/bathroom/{{b[0]}}">{{b[2]}} bathroom on floor {{b[1]}} of {{b[3]}} with rating {% if b[4] %}{{"%.2f" % b[4]}}{% else %} - {% endif %}</a>
     <br />
     {% endfor %}
 </html>
