@@ -33,5 +33,6 @@ CREATE TABLE review (
     brid INTEGER REFERENCES bathroom(brid),
     review TEXT,
     case_id VARCHAR(8) REFERENCES person(case_id),
-    rating INTEGER CHECK (rating > 0 AND rating <= 5)
+    rating INTEGER CHECK (rating > 0 AND rating <= 5),
+    time_added TIMESTAMP WITHOUT TIME ZONE
 );
