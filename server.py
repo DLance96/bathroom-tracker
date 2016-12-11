@@ -73,15 +73,17 @@ def building_major():
     building = int(request.form['building'])
     major = int(request.form['major'])
     cur = conn.cursor()
+    x = ["", ""]
     try:
         cur.execute("""INSERT INTO building_access (bid, mid) VALUES
                     (%s, %s) ON CONFLICT (bid, mid) DO UPDATE SET
                     bid=EXCLUDED.bid RETURNING (SELECT name FROM building
                     WHERE bid=%s), (SELECT name FROM major WHERE mid=%s)""",
-                    (major, building, building, major,))
+                    (building, major, building, major,))
         conn.commit()
         x = cur.fetchone()
-    except:
+    except Exception as e:
+        print(e)
         conn.rollback()
     finally:
         cur.close()
@@ -150,6 +152,34 @@ def add_bathroom_view():
         "add_bathroom.html",
         buildings=buildings,
         gender=gender,
+    )
+
+@app.route("/bathroom/open")
+def open_bathrooms():
+    username = cas.username
+    time = datetime.now().strftime("%H:%M:%S")
+    cur = conn.cursor()
+
+    try:
+        cur.execute("""SELECT acc.brid, acc.floor, acc.gender, acc.name, rev.ar
+                    FROM (SELECT * FROM (SELECT brid, floor, gender, name FROM
+                    ((bathroom NATURAL JOIN building) NATURAL JOIN
+                    building_access) NATURAL JOIN person WHERE case_id=%s)
+                    AS major UNION (SELECT brid, floor, gender, name FROM
+                    bathroom NATURAL JOIN building WHERE opens <= %s AND
+                    closes >= %s)) AS acc LEFT OUTER JOIN (SELECT brid,
+                    AVG(rating) AS ar FROM review GROUP BY brid) AS rev ON
+                    rev.brid=acc.brid""", (username, time, time,))
+        bathrooms = cur.fetchall()
+    except Exception as e:
+        print(e)
+        conn.rollback()
+        return "There was en error with your request"
+    finally:
+        cur.close()
+    return render_template(
+        "open_bathrooms.html",
+        bathrooms=bathrooms,
     )
 
 
