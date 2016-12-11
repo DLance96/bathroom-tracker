@@ -3,6 +3,23 @@
     <title>List the currently stored bathrooms</title>
 </head>
 <body>
+    <form action="{{url_for('list_bathrooms')}}" method="GET">
+        <select name="query-type">
+            <option value="query-1">list all bathrooms</option>
+            <option value="query-2">list all currently accessible bathrooms</option>
+            <option value="query-3">list all currently accessible bathrooms by current user</option>
+            <option value="query-4">list all bathrooms in building...</option>
+            <option value="query-5">list all reviews of bathrooms</option>
+            <option value="query-6">list all reviews of bathroom...</option>
+            <option value="query-7">list all reviews of bathrooms in the last week</option>
+        </select>
+        Select a building: <select name="building">
+            {% for (bid, bname) in buildings %}
+            <option value="{{bid}}">{{bname}}</option>
+            {% endfor %}
+        </select> <br />
+        <input type="submit" />
+    </form>
     <ul>
         {% for (id, floor, gender, name) in bathrooms %}
             <li>id: {{id}}, building: {{name}}, floor: {{floor}}, gender: {{gender}}</li>

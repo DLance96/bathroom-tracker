@@ -116,19 +116,48 @@ def add_bathroom_view():
 
 @app.route("/bathrooms")
 def list_bathrooms():
+    query = request.args.get('query')
+    building = request.args.get('building')
+    bathroom = request.args.get('bathroom')
+
     cur = conn.cursor()
-    cur.execute("""
-        SELECT bathroom.id, bathroom.floor, bathroom.gender,
-        building.name FROM bathroom JOIN building ON
-        bathroom.building=building.id;
-        """)
+
+    if query == 'query-1':
+        cur.execute("""
+            SELECT bathroom.id, bathroom.floor, bathroom.gender,
+            building.name FROM bathroom JOIN building ON
+            bathroom.building=building.id;
+            """)
+    elif query == 'query-2':
+        cur.execute("""
+            SELECT bathroom.id, bathroom.floor, bathroom.gender 
+            FROM bathroom NATURAL JOIN building
+            """)
+    elif query == 'query-3':
+        pass
+    elif query == 'query-4':
+        pass
+    elif query == 'query-5':
+        pass
+    elif query == 'query-6':
+        pass
+    elif query == 'query-7':
+        pass
+
     ret = cur.fetchall()
+
+    cur.execute("""
+        SELECT id, name FROM building;
+        """)
+    building_names = cur.fetchall()
+
     conn.commit()
     cur.close()
-    # return "id, floor, gender, building\n" + str(ret)
+
     return render_template(
         "list_bathrooms.html",
         bathrooms=ret,
+        buildings=building_names,
     )
 
 
