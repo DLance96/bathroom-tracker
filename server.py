@@ -117,11 +117,19 @@ def add_bathroom_view():
 @app.route("/bathrooms")
 def list_bathrooms():
     cur = conn.cursor()
-    cur.execute("SELECT * FROM bathroom")
+    cur.execute("""
+        SELECT bathroom.id, bathroom.floor, bathroom.gender,
+        building.name FROM bathroom JOIN building ON
+        bathroom.building=building.id;
+        """)
     ret = cur.fetchall()
     conn.commit()
     cur.close()
-    return str(ret)
+    # return "id, floor, gender, building\n" + str(ret)
+    return render_template(
+        "list_bathrooms.html",
+        bathrooms=ret,
+    )
 
 
 @app.route("/you")

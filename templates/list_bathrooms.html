@@ -1,0 +1,12 @@
+<html>
+<head>
+    <title>List the currently stored bathrooms</title>
+</head>
+<body>
+    <ul>
+        {% for (id, floor, gender, name) in bathrooms %}
+            <li>id: {{id}}, building: {{name}}, floor: {{floor}}, gender: {{gender}}</li>
+        {% endfor %}
+    </ul>
+</body>
+</html>
