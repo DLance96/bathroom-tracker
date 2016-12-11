@@ -16,13 +16,16 @@ conn = psycopg2.connect(os.environ['PGCONN'])
 def bathroom(id):
     return "THIS IS A BATHROOM WITH ID %s" % id
 
+
 @app.route("/bathrooms")
 def list_bathrooms():
     return "LIST OF BATHROOMS YAY"
 
+
 @app.route("/")
 def hello():
     return "Hello world"
+
 
 if __name__ == "__main__":
     try:
