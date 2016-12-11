@@ -16,12 +16,12 @@ conn = psycopg2.connect(os.environ['PGCONN'])
 def bathroom(id):
     username = cas.username
     cur = conn.cursor()
-    cur.execute("""SELECT bathroom.id, bathroom.gender, bathroom.floor,
+    cur.execute("""SELECT bathroom.brid, bathroom.gender, bathroom.floor,
                 building.name FROM bathroom INNER JOIN building ON
-                bathroom.building=building.id WHERE bathroom.id=%s""", (id,))
+                bathroom.bid=building.bid WHERE bathroom.brid=%s""", (id,))
     bathroom = cur.fetchone()
-    cur.execute("""SELECT review, person, rating FROM review WHERE
-                bathroom=%s""", (id,))
+    cur.execute("""SELECT review, case_id, rating FROM review WHERE
+                brid=%s""", (id,))
     reviews = cur.fetchall()
     conn.commit()
     cur.close()
@@ -41,11 +41,11 @@ def add_building():
     cur = conn.cursor()
     cur.execute("""INSERT INTO building (name) VALUES (%s)
                ON CONFLICT (name) DO UPDATE SET opens=EXCLUDED.opens,
-               closes=EXCLUDED.closes RETURNING id""", (name,))
+               closes=EXCLUDED.closes RETURNING bid""", (name,))
     x = cur.fetchone()
     conn.commit()
     cur.close()
-    return "Successfully created bathroom %s with id %s" % (name, x[0])
+    return "Successfully created bathroom %s with bid %s" % (name, x[0])
 
 
 @app.route("/building/add", methods=["GET"])
@@ -60,10 +60,10 @@ def building_major():
     building = int(request.form['building'])
     major = int(request.form['major'])
     cur = conn.cursor()
-    cur.execute("""INSERT INTO building_access (building, major) VALUES
-                (%s, %s) ON CONFLICT (building, major) DO UPDATE SET
-                building=EXCLUDED.building RETURNING (SELECT name FROM building
-                WHERE id=%s), (SELECT name FROM major WHERE id=%s)""",
+    cur.execute("""INSERT INTO building_access (bid, mid) VALUES
+                (%s, %s) ON CONFLICT (bid, mid) DO UPDATE SET
+                bid=EXCLUDED.bid RETURNING (SELECT name FROM building
+                WHERE bid=%s), (SELECT name FROM major WHERE mid=%s)""",
                 (major, building, building, major,))
     conn.commit()
     x = cur.fetchone()
@@ -75,9 +75,9 @@ def building_major():
 @login_required
 def building_major_view():
     cur = conn.cursor()
-    cur.execute("""SELECT ids, name FROM building""")
+    cur.execute("""SELECT bid, name FROM building""")
     buildings = cur.fetchall()
-    cur.execute("""SELECT id, name FROM major""")
+    cur.execute("""SELECT mid, name FROM major""")
     majors = cur.fetchall()
     conn.commit()
     cur.close()
@@ -96,9 +96,9 @@ def add_bathroom():
     gender = request.form['gender']
 
     cur = conn.cursor()
-    cur.execute("""INSERT INTO bathroom (building, floor, gender) VALUES
-                (%s, %s, %s) RETURNING id, (SELECT name FROM building WHERE
-                id=%s)""", (building_id, floor, gender, building_id,))
+    cur.execute("""INSERT INTO bathroom (bid, floor, gender) VALUES
+                (%s, %s, %s) RETURNING brid, (SELECT name FROM building WHERE
+                bid=%s)""", (building_id, floor, gender, building_id,))
     x = cur.fetchone()
     conn.commit()
     cur.close()
@@ -113,7 +113,7 @@ def add_bathroom():
 def add_bathroom_view():
     gender = ['male', 'female', 'neither']
     cur = conn.cursor()
-    cur.execute("""SELECT id, name FROM building""")
+    cur.execute("""SELECT bid, name FROM building""")
     buildings = cur.fetchall()
     conn.commit()
     cur.close()
@@ -128,9 +128,9 @@ def add_bathroom_view():
 @app.route("/bathrooms")
 def list_bathrooms():
     cur = conn.cursor()
-    cur.execute("""SELECT bathroom.id, bathroom.floor, bathroom.gender,
+    cur.execute("""SELECT bathroom.brid, bathroom.floor, bathroom.gender,
                 building.name FROM bathroom INNER JOIN building ON
-                bathroom.building=building.id""")
+                bathroom.bid=building.bid""")
     bathrooms = cur.fetchall()
     conn.commit()
     cur.close()
@@ -184,8 +184,8 @@ def mod_user():
     username = cas.username
     major = int(request.form['major'])
     cur = conn.cursor()
-    cur.execute("""INSERT INTO person (case_id, major) VALUES (%s, %s)
-                ON CONFLICT (case_id) DO UPDATE SET major=EXCLUDED.major
+    cur.execute("""INSERT INTO person (case_id, mid) VALUES (%s, %s)
+                ON CONFLICT (case_id) DO UPDATE SET mid=EXCLUDED.mid
                 RETURNING case_id""", (username, major,))
     conn.commit()
     cur.close()
@@ -197,7 +197,7 @@ def mod_user():
 def mod_user_view():
     username = cas.username
     cur = conn.cursor()
-    cur.execute("""SELECT id, name FROM major""")
+    cur.execute("""SELECT mid, name FROM major""")
     majors = cur.fetchall()
     conn.commit()
     cur.close()
@@ -216,7 +216,7 @@ def add_review(bathroom):
     rating = int(request.form['rating'])
 
     cur = conn.cursor()
-    cur.execute("""INSERT INTO review (bathroom, review, person, rating) VALUES
+    cur.execute("""INSERT INTO review (brid, review, case_id, rating) VALUES
                 (%s, %s, %s, %s)""", (bathroom, review, username, rating,))
     conn.commit()
     cur.close()
