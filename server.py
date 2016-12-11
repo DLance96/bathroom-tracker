@@ -114,7 +114,6 @@ def add_bathroom_view():
     )
 
 
-
 @app.route("/bathrooms")
 def list_bathrooms():
     cur = conn.cursor()
@@ -230,7 +229,6 @@ def get_review(bathroom):
     conn.commit()
     cur.close()
     return str(x)
-
 
 
 @app.route("/")
