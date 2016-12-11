@@ -48,9 +48,11 @@ def add_building():
     closes = request.form['closes']
     x = [""]
     try:
-        cur.execute("""INSERT INTO building (name, opens, closes) VALUES
+        cur.execute("""
+                    INSERT INTO building (name, opens, closes) VALUES
                     (%s, %s, %s) ON CONFLICT (name) DO UPDATE SET
-                    opens=EXCLUDED.opens, closes=EXCLUDED.closes RETURNING bid""",
+                    opens=EXCLUDED.opens, closes=EXCLUDED.closes RETURNING bid
+                    """,
                     (name, opens, closes,))
         x = cur.fetchone()
         conn.commit()
@@ -120,9 +122,11 @@ def add_bathroom():
 
     cur = conn.cursor()
     try:
-        cur.execute("""INSERT INTO bathroom (bid, floor, gender) VALUES
-                    (%s, %s, %s) RETURNING brid, (SELECT name FROM building WHERE
-                    bid=%s)""", (building_id, floor, gender, building_id,))
+        cur.execute("""
+                    INSERT INTO bathroom (bid, floor, gender) VALUES
+                    (%s, %s, %s) RETURNING brid, (SELECT name FROM building
+                    WHERE bid=%s)
+                    """, (building_id, floor, gender, building_id,))
         x = cur.fetchone()
     except:
         conn.rollback()
@@ -153,6 +157,7 @@ def add_bathroom_view():
         buildings=buildings,
         gender=gender,
     )
+
 
 @app.route("/bathroom/open")
 def open_bathrooms():
@@ -190,61 +195,48 @@ def list_bathrooms():
     building = request.args.get('building')
     bathroom = request.args.get('bathroom')
 
-    cur = conn.cursor()
-<<<<<<< HEAD
-
-    if query == 'query-1':
-        cur.execute("""
-            SELECT bathroom.id, bathroom.floor, bathroom.gender,
-            building.name FROM bathroom JOIN building ON
-            bathroom.building=building.id;
-            """)
-    elif query == 'query-2':
-        cur.execute("""
-            SELECT bathroom.id, bathroom.floor, bathroom.gender 
-            FROM bathroom NATURAL JOIN building
-            """)
-    elif query == 'query-3':
-        pass
-    elif query == 'query-4':
-        pass
-    elif query == 'query-5':
-        pass
-    elif query == 'query-6':
-        pass
-    elif query == 'query-7':
-        pass
-
-    ret = cur.fetchall()
-
-    cur.execute("""
-        SELECT id, name FROM building;
-        """)
-    building_names = cur.fetchall()
-
-    conn.commit()
-    cur.close()
-
-    return render_template(
-        "list_bathrooms.html",
-        bathrooms=ret,
-        buildings=building_names,
-=======
     try:
-        cur.execute("""SELECT bathroom.brid, bathroom.floor, bathroom.gender,
-                    building.name, rev.ar FROM bathroom NATURAL JOIN building
-                    LEFT OUTER JOIN (SELECT brid, AVG(rating) AS ar FROM review
-                    GROUP BY brid) AS rev ON rev.brid=bathroom.brid""")
-        bathrooms = cur.fetchall()
+        cur = conn.cursor()
+
+        if query == 'query-1':
+            cur.execute("""
+                SELECT bathroom.id, bathroom.floor, bathroom.gender,
+                building.name FROM bathroom JOIN building ON
+                bathroom.building=building.id;
+                """)
+        elif query == 'query-2':
+            cur.execute("""
+                SELECT bathroom.id, bathroom.floor, bathroom.gender
+                FROM bathroom NATURAL JOIN building
+                """)
+        elif query == 'query-3':
+            pass
+        elif query == 'query-4':
+            pass
+        elif query == 'query-5':
+            pass
+        elif query == 'query-6':
+            pass
+        elif query == 'query-7':
+            pass
+
+        ret = cur.fetchall()
+
+        cur.execute("""
+            SELECT id, name FROM building;
+            """)
+        building_names = cur.fetchall()
+
         conn.commit()
     except:
         conn.rollback()
     finally:
         cur.close()
+
     return render_template(
-        "bathrooms.html",
-        bathrooms=bathrooms,
->>>>>>> origin/master
+        "list_bathrooms.html",
+        bathrooms=ret,
+        buildings=building_names,
     )
 
 
@@ -260,8 +252,10 @@ def add_major():
     major = request.form['major']
     cur = conn.cursor()
     try:
-        cur.execute("""INSERT INTO major (name) VALUES (%s) ON CONFLICT (name)
-                    DO UPDATE SET name=EXCLUDED.name RETURNING name""", (major,))
+        cur.execute("""
+                    INSERT INTO major (name) VALUES (%s) ON CONFLICT (name)
+                    DO UPDATE SET name=EXCLUDED.name RETURNING name
+                    """, (major,))
         x = cur.fetchone()
         conn.commit()
     except:
