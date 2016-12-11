@@ -1,0 +1,25 @@
+<html>
+<head>
+    <title>Add a bathroom</title>
+</head>
+<body>
+    <form action="{{url_for('add_bathroom')}}" method="POST">
+        Select a building: <select name="building">
+            {% for (bid, bname) in buildings %}
+            <option value="{{bid}}">{{bname}}</option>
+            {% endfor %}
+        </select> <br />
+        Select gender: <select name="gender">
+            {% for g in gender %}
+            <option value="{{g}}">{{g}}</option>
+            {% endfor %}
+        </select> <br />
+        Select floor: <select name="floor">
+            {% for n in range(-1,13) %}
+            <option value="{{n}}">{{n}}</option>
+            {% endfor %}
+        </select> <br />
+        <input type="submit" />
+    </form>
+</body>
+</html>
