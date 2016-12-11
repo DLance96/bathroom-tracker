@@ -19,6 +19,7 @@ def bathroom(id):
     x = cur.fetchone() or 'none'
     conn.commit()
     cur.close()
+    # TODO: return real info here
     return x
 
 
@@ -33,7 +34,13 @@ def add_building():
     x = cur.fetchone()
     conn.commit()
     cur.close()
-    return str(x)
+    return "Successfully created bathroom %s with id %s" % (name, x[0])
+
+
+@app.route("/building/add", methods=["GET"])
+@login_required
+def add_building_view():
+    return render_template("add_building.html")
 
 
 @app.route("/building/major", methods=["POST"])
@@ -43,18 +50,21 @@ def building_major():
     major = int(request.form['major'])
     cur = conn.cursor()
     cur.execute("""INSERT INTO building_access (building, major) VALUES
-                (%s, %s) ON CONFLICT (building, major) DO NOTHING""",
-                (major, building,))
+                (%s, %s) ON CONFLICT (building, major) DO UPDATE SET
+                building=EXCLUDED.building RETURNING (SELECT name FROM building
+                WHERE id=%s), (SELECT name FROM major WHERE id=%s)""",
+                (major, building, building, major,))
     conn.commit()
+    x = cur.fetchone()
     cur.close()
-    return "DONE"
+    return "Associated building %s with major %s" % (x[0], x[1])
 
 
 @app.route("/building/major", methods=["GET"])
 @login_required
 def building_major_view():
     cur = conn.cursor()
-    cur.execute("""SELECT id, name FROM building""")
+    cur.execute("""SELECT ids, name FROM building""")
     buildings = cur.fetchall()
     cur.execute("""SELECT id, name FROM major""")
     majors = cur.fetchall()
@@ -68,27 +78,24 @@ def building_major_view():
     )
 
 
-@app.route("/building/add", methods=["GET"])
-@login_required
-def add_building_view():
-    return "Add building form goes here"
-
-
 @app.route("/bathroom/add", methods=["POST"])
 @login_required
 def add_bathroom():
-    building_id = request.form['building_id']
+    building_id = int(request.form['building'])
     floor = int(request.form['floor'])
     gender = request.form['gender']
 
     cur = conn.cursor()
     cur.execute("""INSERT INTO bathroom (building, floor, gender) VALUES
-                (%s, %s, %s) RETURNING id""", (building_id, floor, gender,))
+                (%s, %s, %s) RETURNING id, (SELECT name FROM building WHERE
+                id=%s)""", (building_id, floor, gender, building_id,))
     x = cur.fetchone()
     conn.commit()
     cur.close()
 
-    return str(x)
+    return "Added bathroom to building %s on floor %s with id %s" % (x[1],
+                                                                     floor,
+                                                                     x[0])
 
 
 @app.route("/bathroom/add", methods=["GET"])
@@ -100,8 +107,11 @@ def add_bathroom_view():
     buildings = cur.fetchall()
     conn.commit()
     cur.close()
-    # TODO: make a form with this stuffs
-    return (gender, buildings)
+    return render_template(
+        "add_bathroom.html",
+        buildings=buildings,
+        gender=gender,
+    )
 
 
 @app.route("/bathrooms")
