@@ -34,7 +34,7 @@ def add_building():
     x = cur.fetchone()
     conn.commit()
     cur.close()
-    return "Successfully created bathroom %s with id %s" % (name, x[0])
+    return "Successfully created building %s with id %s" % (name, x[0])
 
 
 @app.route("/building/add", methods=["GET"])
