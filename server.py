@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-from flask import Flask, request, render_template
+from flask import Flask, request, render_template, session
 from flask_cas import CAS, login_required, login, logout
+from datetime import datetime
 import psycopg2
 import os
 
@@ -14,13 +15,28 @@ conn = psycopg2.connect(os.environ['PGCONN'])
 
 @app.route("/bathroom/<int:id>")
 def bathroom(id):
+    username = cas.username
     cur = conn.cursor()
-    cur.execute("SELECT * FROM bathroom WHERE id=%s", (id,))
-    x = cur.fetchone() or 'none'
-    conn.commit()
-    cur.close()
-    # TODO: return real info here
-    return x
+    try:
+        cur.execute("""SELECT bathroom.brid, bathroom.gender, bathroom.floor,
+                    building.name FROM bathroom NATURAL JOIN building WHERE
+                    bathroom.brid=%s""", (id,))
+        bathroom = cur.fetchone()
+        cur.execute("""SELECT review, case_id, rating FROM review WHERE
+                    brid=%s""", (id,))
+        reviews = cur.fetchall()
+        conn.commit()
+    except:
+        conn.rollback()
+    finally:
+        cur.close()
+    session['CAS_AFTER_LOGIN_SESSION_URL'] = request.path
+    return render_template(
+        "bathroom.html",
+        bathroom=bathroom,
+        reviews=reviews,
+        username=username,
+    )
 
 
 @app.route("/building/add", methods=["POST"])
@@ -28,13 +44,21 @@ def bathroom(id):
 def add_building():
     name = request.form['name']
     cur = conn.cursor()
-    cur.execute("""INSERT INTO building (name) VALUES (%s)
-               ON CONFLICT (name) DO UPDATE SET opens=EXCLUDED.opens,
-               closes=EXCLUDED.closes RETURNING id""", (name,))
-    x = cur.fetchone()
-    conn.commit()
-    cur.close()
-    return "Successfully created building %s with id %s" % (name, x[0])
+    opens = request.form['opens']
+    closes = request.form['closes']
+    x = [""]
+    try:
+        cur.execute("""INSERT INTO building (name, opens, closes) VALUES
+                    (%s, %s, %s) ON CONFLICT (name) DO UPDATE SET
+                    opens=EXCLUDED.opens, closes=EXCLUDED.closes RETURNING bid""",
+                    (name, opens, closes,))
+        x = cur.fetchone()
+        conn.commit()
+    except:
+        conn.rollback()
+    finally:
+        cur.close()
+    return "Successfully created bathroom %s with bid %s" % (name, x[0])
 
 
 @app.route("/building/add", methods=["GET"])
@@ -49,14 +73,20 @@ def building_major():
     building = int(request.form['building'])
     major = int(request.form['major'])
     cur = conn.cursor()
-    cur.execute("""INSERT INTO building_access (building, major) VALUES
-                (%s, %s) ON CONFLICT (building, major) DO UPDATE SET
-                building=EXCLUDED.building RETURNING (SELECT name FROM building
-                WHERE id=%s), (SELECT name FROM major WHERE id=%s)""",
-                (major, building, building, major,))
-    conn.commit()
-    x = cur.fetchone()
-    cur.close()
+    x = ["", ""]
+    try:
+        cur.execute("""INSERT INTO building_access (bid, mid) VALUES
+                    (%s, %s) ON CONFLICT (bid, mid) DO UPDATE SET
+                    bid=EXCLUDED.bid RETURNING (SELECT name FROM building
+                    WHERE bid=%s), (SELECT name FROM major WHERE mid=%s)""",
+                    (building, major, building, major,))
+        conn.commit()
+        x = cur.fetchone()
+    except Exception as e:
+        print(e)
+        conn.rollback()
+    finally:
+        cur.close()
     return "Associated building %s with major %s" % (x[0], x[1])
 
 
@@ -64,13 +94,16 @@ def building_major():
 @login_required
 def building_major_view():
     cur = conn.cursor()
-    cur.execute("""SELECT ids, name FROM building""")
-    buildings = cur.fetchall()
-    cur.execute("""SELECT id, name FROM major""")
-    majors = cur.fetchall()
-    conn.commit()
-    cur.close()
-    # TODO: a form that allows users to select one of each of these
+    try:
+        cur.execute("""SELECT bid, name FROM building""")
+        buildings = cur.fetchall()
+        cur.execute("""SELECT mid, name FROM major""")
+        majors = cur.fetchall()
+        conn.commit()
+    except:
+        conn.rollback()
+    finally:
+        cur.close()
     return render_template(
         "building_major.html",
         buildings=buildings,
@@ -86,11 +119,15 @@ def add_bathroom():
     gender = request.form['gender']
 
     cur = conn.cursor()
-    cur.execute("""INSERT INTO bathroom (building, floor, gender) VALUES
-                (%s, %s, %s) RETURNING id, (SELECT name FROM building WHERE
-                id=%s)""", (building_id, floor, gender, building_id,))
-    x = cur.fetchone()
-    conn.commit()
+    try:
+        cur.execute("""INSERT INTO bathroom (bid, floor, gender) VALUES
+                    (%s, %s, %s) RETURNING brid, (SELECT name FROM building WHERE
+                    bid=%s)""", (building_id, floor, gender, building_id,))
+        x = cur.fetchone()
+    except:
+        conn.rollback()
+    finally:
+        conn.commit()
     cur.close()
 
     return "Added bathroom to building %s on floor %s with id %s" % (x[1],
@@ -103,17 +140,50 @@ def add_bathroom():
 def add_bathroom_view():
     gender = ['male', 'female', 'neither']
     cur = conn.cursor()
-    cur.execute("""SELECT id, name FROM building""")
-    buildings = cur.fetchall()
-    conn.commit()
-    cur.close()
+    try:
+        cur.execute("""SELECT bid, name FROM building""")
+        buildings = cur.fetchall()
+        conn.commit()
+    except:
+        conn.rollback()
+    finally:
+        cur.close()
     return render_template(
         "add_bathroom.html",
         buildings=buildings,
         gender=gender,
     )
 
+@app.route("/bathroom/open")
+def open_bathrooms():
+    username = cas.username
+    time = datetime.now().strftime("%H:%M:%S")
+    cur = conn.cursor()
 
+    try:
+        cur.execute("""SELECT acc.brid, acc.floor, acc.gender, acc.name, rev.ar
+                    FROM (SELECT * FROM (SELECT brid, floor, gender, name FROM
+                    ((bathroom NATURAL JOIN building) NATURAL JOIN
+                    building_access) NATURAL JOIN person WHERE case_id=%s)
+                    AS major UNION (SELECT brid, floor, gender, name FROM
+                    bathroom NATURAL JOIN building WHERE opens <= %s AND
+                    closes >= %s)) AS acc LEFT OUTER JOIN (SELECT brid,
+                    AVG(rating) AS ar FROM review GROUP BY brid) AS rev ON
+                    rev.brid=acc.brid""", (username, time, time,))
+        bathrooms = cur.fetchall()
+    except Exception as e:
+        print(e)
+        conn.rollback()
+        return "There was en error with your request"
+    finally:
+        cur.close()
+    return render_template(
+        "open_bathrooms.html",
+        bathrooms=bathrooms,
+    )
+
+
+@app.route("/")
 @app.route("/bathrooms")
 def list_bathrooms():
     query = request.args.get('query')
@@ -121,6 +191,7 @@ def list_bathrooms():
     bathroom = request.args.get('bathroom')
 
     cur = conn.cursor()
+<<<<<<< HEAD
 
     if query == 'query-1':
         cur.execute("""
@@ -158,6 +229,22 @@ def list_bathrooms():
         "list_bathrooms.html",
         bathrooms=ret,
         buildings=building_names,
+=======
+    try:
+        cur.execute("""SELECT bathroom.brid, bathroom.floor, bathroom.gender,
+                    building.name, rev.ar FROM bathroom NATURAL JOIN building
+                    LEFT OUTER JOIN (SELECT brid, AVG(rating) AS ar FROM review
+                    GROUP BY brid) AS rev ON rev.brid=bathroom.brid""")
+        bathrooms = cur.fetchall()
+        conn.commit()
+    except:
+        conn.rollback()
+    finally:
+        cur.close()
+    return render_template(
+        "bathrooms.html",
+        bathrooms=bathrooms,
+>>>>>>> origin/master
     )
 
 
@@ -172,105 +259,98 @@ def you():
 def add_major():
     major = request.form['major']
     cur = conn.cursor()
-    cur.execute("""INSERT INTO major (name) VALUES (%s) ON CONFLICT (name)
-                DO UPDATE SET name=EXCLUDED.name RETURNING id""", (major,))
-    x = cur.fetchone()
-    conn.commit()
-    cur.close()
-    return str(x)
+    try:
+        cur.execute("""INSERT INTO major (name) VALUES (%s) ON CONFLICT (name)
+                    DO UPDATE SET name=EXCLUDED.name RETURNING name""", (major,))
+        x = cur.fetchone()
+        conn.commit()
+    except:
+        conn.rollback()
+    finally:
+        cur.close()
+    return "Successfully added the major %s" % x[0]
 
 
 @app.route("/major/add", methods=["GET"])
 @login_required
 def add_major_view():
-    # TODO: form to add a major
-    return "FORM TO ADD A MAJOR"
+    return render_template("add_major.html")
 
 
 @app.route("/user/add/<string:username>")
 @login_required
 def add_user(username):
     cur = conn.cursor()
-    cur.execute("""INSERT INTO person (case_id) VALUES (%s) ON CONFLICT
-                (case_id) DO UPDATE SET case_id=EXCLUDED.case_id
-                RETURNING case_id""", (username,))
-    x = cur.fetchone()
-    conn.commit()
-    cur.close()
+    try:
+        cur.execute("""INSERT INTO person (case_id) VALUES (%s) ON CONFLICT
+                    (case_id) DO UPDATE SET case_id=EXCLUDED.case_id
+                    RETURNING case_id""", (username,))
+        x = cur.fetchone()
+        conn.commit()
+    except:
+        conn.rollback()
+    finally:
+        cur.close()
     return str(x)
 
 
-@app.route("/user/modify/<string:username>", methods=["POST"])
+@app.route("/user/modify", methods=["POST"])
 @login_required
-def mod_user(username):
-    if cas.username != username:
-        return "You can only edit you"
+def mod_user():
     username = cas.username
-    major = int(request.post['major'])
+    major = int(request.form['major'])
     cur = conn.cursor()
-    cur.execute("""INSERT INTO person (case_id, major) VALUES (%s, %s)
-                ON CONFLICT (case_id) DO UPDATE SET major=EXCLUDED.major
-                RETURNING case_id""", (username, major,))
-    x = cur.fetchone()
-    conn.commit()
-    cur.close()
-    return str(x)
+    try:
+        cur.execute("""INSERT INTO person (case_id, mid) VALUES (%s, %s)
+                    ON CONFLICT (case_id) DO UPDATE SET mid=EXCLUDED.mid
+                    RETURNING case_id""", (username, major,))
+        conn.commit()
+    except:
+        conn.rollback()
+    finally:
+        cur.close()
+    return "Successfully modified"
 
 
-@app.route("/user/modify/<string:username>", methods=["GET"])
+@app.route("/user/modify", methods=["GET"])
 @login_required
-def mod_user_view(username):
+def mod_user_view():
+    username = cas.username
     cur = conn.cursor()
-    cur.execute("""SELECT id, name FROM major""")
-    majors = cur.fetchall()
-    conn.commit()
-    cur.close()
-    # TODO: make a form here too
-    return str(majors)
+    try:
+        cur.execute("""SELECT mid, name FROM major""")
+        majors = cur.fetchall()
+        conn.commit()
+    except:
+        conn.rollback()
+    finally:
+        cur.close()
+    return render_template(
+        "modify_user.html",
+        majors=majors,
+        username=username,
+    )
 
 
 @app.route("/review/add/<int:bathroom>", methods=["POST"])
 @login_required
-def add_reivew(bathroom):
+def add_review(bathroom):
     username = cas.username
-    bathroom = int(request.form['bathroom'])
     review = request.form['review']
     rating = int(request.form['rating'])
+    time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     cur = conn.cursor()
-    cur.execute("""INSERT INTO review (bathroom, review, person, rating) VALUES
-                (%s, %s, %s, %s)""", (bathroom, review, username, rating,))
-    conn.commit()
-    cur.close()
-    return "DONE"
-
-
-@app.route("/review/add/<int:bathroom>", methods=["GET"])
-@login_required
-def add_reivew_view(bathroom):
-    cur = conn.cursor()
-    cur.execute("""SELECT id, name FROM bathroom""")
-    bathrooms = cur.fetchall()
-    conn.commit()
-    cur.close()
-    # TODO: form here
-    return str(bathrooms)
-
-
-@app.route("/review/<int:bathroom>")
-def get_review(bathroom):
-    cur = conn.cursor()
-    cur.execute("""SELECT bathroom, review, rating FROM review WHERE
-                bathroom=(%s)""", (bathroom,))
-    x = cur.fetchall()
-    conn.commit()
-    cur.close()
-    return str(x)
-
-
-@app.route("/")
-def hello():
-    return "Hello world"
+    try:
+        cur.execute("""INSERT INTO review (brid, review, case_id, rating,
+                    time_added) VALUES (%s, %s, %s, %s, %s)""",
+                    (bathroom, review, username, rating, time,))
+        conn.commit()
+    except:
+        conn.rollback()
+    finally:
+        cur.close()
+    return "Review added"
 
 
 app.route("/login")(login)

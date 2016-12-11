@@ -1,11 +1,13 @@
 <html>
 <head>
-    <title>Associate a building and major</title>
+    <title>Add a building</title>
 </head>
 <body>
     <form action="{{url_for('add_building')}}" method="POST">
         Building name: <input name="name" type="text" />
         <br />
+        Opens time: <input type="time" name="opens" /><br />
+        Closes time: <input type="time" name="closes" /><br />
         <input type="submit" />
     </form>
 </body>

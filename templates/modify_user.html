@@ -1,0 +1,16 @@
+<html>
+<head>
+    <title>Modify a user</title>
+</head>
+<body>
+    Modifying user {{username}}<br />
+    <form action="{{url_for('mod_user')}}" method="POST">
+        Select major: <select name="major">
+            {% for (mid, mname) in majors %}
+            <option value="{{mid}}">{{mname}}</option>
+            {% endfor %}
+        </select> <br />
+        <input type="submit" />
+    </form>
+</body>
+</html>
