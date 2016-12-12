@@ -1,0 +1,19 @@
+<html>
+<head>
+    <title>Review list</title>
+</head>
+    {% for r in reviews %}
+    <ul>
+        <li>Bathroom id: {{r[0]}}</li>
+        <li>Floor: {{r[1]}}</li>
+        <li>Building: {{r[2]}}</li>
+        <li>Average Rating: {{r[3]}}</li>
+    </ul>
+    {% endfor %}
+    <br /><br />
+    <a href="/building/add">Add a building</a><br />
+    <a href="/bathroom/add">Add a bathroom</a><br />
+    <a href="/major/add">Add a major</a><br />
+    <a href="/user/modify">Modify your user</a><br />
+    <a href="/building/major">Associate a building and a major</a><br />
+</html>

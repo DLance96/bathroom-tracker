@@ -239,7 +239,7 @@ def list_last_week_reviews():
     finally:
         cur.close()
     return render_template(
-        "list_reviews.html",
+        "reviews.html",
         reviews=reviews,
     )
 
