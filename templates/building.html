@@ -1,0 +1,18 @@
+<html>
+<head>
+  <title>{{building[1]}}'s Bathrooms</title>
+</head>
+<body>
+    Bathrooms:<br />
+    {% for bathroom in bathrooms %}
+    Floor: {{bathroom[1]}} - Gender: {{bathroom[2]}} - Rating: {{bathroom[4]}}<br />
+    {% endfor %}
+    <br /></br />
+    {% if username %}
+    To add a bathroom go <a href="/bathroom/add">here</a>!
+    </form>
+    {% else %}
+    Please <a href="/login">login</a> to add a bathroom.
+    {% endif %}
+</body>
+</html>
