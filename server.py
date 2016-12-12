@@ -2,6 +2,7 @@
 from flask import Flask, request, render_template, session
 from flask_cas import CAS, login_required, login, logout
 from datetime import datetime
+from datetime import timedelta
 import psycopg2
 import os
 
@@ -191,52 +192,55 @@ def open_bathrooms():
 @app.route("/")
 @app.route("/bathrooms")
 def list_bathrooms():
-    query = request.args.get('query')
-    building = request.args.get('building')
-    bathroom = request.args.get('bathroom')
-
+    cur = conn.cursor()
     try:
-        cur = conn.cursor()
-
-        if query == 'query-1':
-            cur.execute("""
-                SELECT bathroom.id, bathroom.floor, bathroom.gender,
-                building.name FROM bathroom JOIN building ON
-                bathroom.building=building.id;
-                """)
-        elif query == 'query-2':
-            cur.execute("""
-                SELECT bathroom.id, bathroom.floor, bathroom.gender
-                FROM bathroom NATURAL JOIN building
-                """)
-        elif query == 'query-3':
-            pass
-        elif query == 'query-4':
-            pass
-        elif query == 'query-5':
-            pass
-        elif query == 'query-6':
-            pass
-        elif query == 'query-7':
-            pass
-
-        ret = cur.fetchall()
-
         cur.execute("""
-            SELECT id, name FROM building;
-            """)
-        building_names = cur.fetchall()
-
+                    SELECT bathroom.brid, bathroom.floor,
+                    bathroom.gender, building.name, rev.ar FROM
+                    bathroom NATURAL JOIN building LEFT OUTER JOIN
+                    (SELECT brid, AVG(rating) AS ar FROM review
+                    GROUP BY brid) AS rev ON rev.brid=bathroom.brid
+                    """)
+        bathrooms = cur.fetchall()
         conn.commit()
     except:
         conn.rollback()
     finally:
         cur.close()
-
     return render_template(
-        "list_bathrooms.html",
-        bathrooms=ret,
-        buildings=building_names,
+                "bathrooms.html",
+                bathrooms=bathrooms,
+    )
+
+
+@app.route("/reviews/week")
+@login_required
+def list_last_week_reviews():
+    cur = conn.cursor()
+    time = datetime.now() - timedelta(days=7)
+    time = time.strftime("%Y-%m-%d %H:%M:%S")
+    try:
+        cur.execute("""
+                    SELECT brid, floor, name, avg
+                    FROM ((((
+                        SELECT brid, AVG(review.rating) AS avg
+                        FROM bathroom NATURAL JOIN review
+                        GROUP BY bathroom.brid
+                    ) AS r NATURAL JOIN bathroom) NATURAL JOIN building)
+                    NATURAL JOIN review)
+                    WHERE time_added > %s;
+                    """, (time,))
+        reviews = cur.fetchall()
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        print(e)
+        return "there was a problem witht he SQL query"
+    finally:
+        cur.close()
+    return render_template(
+        "list_reviews.html",
+        reviews=reviews,
     )
 
 
