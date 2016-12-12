@@ -2,6 +2,7 @@
 <head>
     <title>Open Bathrooms</title>
 </head>
+<body>
     <h1>Bathrooms accessible right now</h1>
     {% for b in bathrooms %}
     <a href="/bathroom/{{b[0]}}">{{b[2]}} bathroom on floor {{b[1]}} of {{b[3]}} with rating {% if b[4] %}{{"%.2f" % b[4]}}{% else %} - {% endif %}</a>
@@ -13,4 +14,7 @@
     <a href="/major/add">Add a major</a><br />
     <a href="/user/modify">Modify your user</a><br />
     <a href="/building/major">Associate a building and a major</a><br />
+    <a href="/bathroom/open">Bathrooms open to you</a><br />
+    <a href="/bathroom/opentoall">Bathrooms open to everyone right now</a><br />
+</body>
 </html>

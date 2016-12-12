@@ -54,7 +54,8 @@ def add_building():
                     (name, opens, closes,))
         x = cur.fetchone()
         conn.commit()
-    except:
+    except Exception as e:
+        print(e)
         conn.rollback()
     finally:
         cur.close()
@@ -183,6 +184,31 @@ def open_bathrooms():
     )
 
 
+@app.route("/bathroom/opentoall")
+def openall_bathrooms():
+    time = datetime.now().strftime("%H:%M:%S")
+    cur = conn.cursor()
+
+    try:
+        cur.execute("""SELECT acc.brid, acc.floor, acc.gender, acc.name, rev.ar
+                    FROM (SELECT brid, floor, gender, name FROM
+                    bathroom NATURAL JOIN building WHERE opens <= %s AND
+                    closes >= %s) AS acc LEFT OUTER JOIN (SELECT brid,
+                    AVG(rating) AS ar FROM review GROUP BY brid) AS rev ON
+                    rev.brid=acc.brid""", (time, time,))
+        bathrooms = cur.fetchall()
+    except Exception as e:
+        print(e)
+        conn.rollback()
+        return "There was en error with your request"
+    finally:
+        cur.close()
+    return render_template(
+        "open_bathrooms.html",
+        bathrooms=bathrooms,
+    )
+
+
 @app.route("/")
 @app.route("/bathrooms")
 def list_bathrooms():
@@ -215,12 +241,14 @@ def you():
 def add_major():
     major = request.form['major']
     cur = conn.cursor()
+    x = [""]
     try:
         cur.execute("""INSERT INTO major (name) VALUES (%s) ON CONFLICT (name)
                     DO UPDATE SET name=EXCLUDED.name RETURNING name""", (major,))
         x = cur.fetchone()
         conn.commit()
-    except:
+    except Exception as e:
+        print(e)
         conn.rollback()
     finally:
         cur.close()
