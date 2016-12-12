@@ -7,7 +7,7 @@ import os
 
 app = Flask(__name__)
 app.config['CAS_SERVER'] = 'https://login.case.edu'
-app.config['CAS_AFTER_LOGIN'] = 'hello'
+app.config['CAS_AFTER_LOGIN'] = 'list_bathrooms'
 cas = CAS(app, '/cas')
 
 conn = psycopg2.connect(os.environ['PGCONN'])
