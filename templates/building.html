@@ -5,7 +5,7 @@
 <body>
     Bathrooms:<br />
     {% for bathroom in bathrooms %}
-    Floor: {{bathroom[1]}} - Gender: {{bathroom[2]}} - Rating: {{bathroom[4]}}<br />
+    <a href="/bathroom/{{bathroom[0]}}">Floor: {{bathroom[1]}} - Gender: {{bathroom[2]}} - Rating: {{bathroom[4]}}</a><br />
     {% endfor %}
     <br /></br />
     {% if username %}

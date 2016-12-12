@@ -38,17 +38,18 @@ def bathroom(id):
         username=username,
     )
 
-@app.rout("/building/<int:id>")
+@app.route("/building/<int:id>")
 def building(id):
+    username = cas.username
     cur = conn.cursor()
     try:
-        cur.execute("""SELECT building.bid, building.name FROM building 
-                    WHERE building.bid=%s""", (id,))
+        cur.execute("""SELECT bid, name FROM building
+                    WHERE bid=%s""", (id,))
         building = cur.fetchone()
         cur.execute("""SELECT bathroom.brid, bathroom.floor, bathroom.gender,
                     building.name, rev.ar FROM bathroom NATURAL JOIN building
                     LEFT OUTER JOIN (SELECT brid, AVG(rating) AS ar FROM review
-                    GROUP BY brid) AS rev ON rev.brid=bathroom.brid AND 
+                    GROUP BY brid) AS rev ON rev.brid=bathroom.brid AND
                     bathroom.bid=%s""", (id,))
         bathrooms = cur.fetchall()
         conn.commit()
@@ -56,12 +57,12 @@ def building(id):
         conn.rollback()
     finally:
         cur.close()
-    session['CAS_AFTER_LOGIN_SESSION_URL'] = request.path
     return render_template(
         "building.html",
         building=building,
         bathrooms=bathrooms,
         username=username,
+    )
 
 
 @app.route("/building/add", methods=["POST"])
